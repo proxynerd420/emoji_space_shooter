@@ -4156,6 +4156,7 @@
 
         let musicTimeout      = null;
         let musicRunning      = false;
+        let musicGen          = 0;
         let currentTrack      = 0;
         let musicLoopStartTime = 0;
 
@@ -4167,7 +4168,8 @@
 
         function playMusicLoop() {
             if (!musicRunning) return;
-            musicLoopStartTime = performance.now(); // für Preview-Restzeit-Berechnung
+            const myGen = musicGen;
+            musicLoopStartTime = performance.now();
             const ctx      = getAudioCtx();
             const bpm      = getMusicBpm();
             const e8       = 60 / bpm / 2;
@@ -4346,12 +4348,15 @@
                 break;
             }}
 
-            musicTimeout = setTimeout(playMusicLoop, (loopDur - 0.04) * 1000);
+            musicTimeout = setTimeout(() => {
+                if (musicGen === myGen) playMusicLoop();
+            }, (loopDur - 0.04) * 1000);
         }
 
         function startMusic() {
-            stopMenuMusic();            // Menü-Musik immer stoppen bevor Game-Musik startet
+            stopMenuMusic();
             if (musicRunning) return;
+            musicGen++;
             currentTrack = Math.floor(Math.random() * TRACKS.length);
             musicRunning = true;
             document.getElementById('musicStyleName').textContent = TRACKS[currentTrack].name;
@@ -4360,6 +4365,7 @@
         }
 
         function stopMusic() {
+            musicGen++;
             musicRunning = false;
             if (musicTimeout) { clearTimeout(musicTimeout); musicTimeout = null; }
             document.getElementById('musicStyleHud').style.display = 'none';
@@ -4413,6 +4419,7 @@
         let menuMusicTimeout = null;
         let menuMusicRunning = false;
         let menuLoopStartTime = 0;
+        let menuMusicGen = 0; // Generation counter – verhindert dass vorausgeplante Nodes weiterlaufen
         const MENU_LOOP_DURATION_MS = (60 / 108 / 2) * 64 * 1000; // ~17778ms bei 108 BPM, 64 Achtel
 
         const MN = N; // selbe Frequenztabelle
@@ -4479,7 +4486,8 @@
 
         function playMenuMusicLoop() {
             if (!menuMusicRunning) return;
-            menuLoopStartTime = performance.now(); // Loop-Start-Zeit für Restzeit-Berechnung
+            menuLoopStartTime = performance.now();
+            const myGen = menuMusicGen; // Diese Generation merken
             const ctx  = getAudioCtx();
             const bpm  = 108;
             const e8   = 60 / bpm / 2;
@@ -4620,18 +4628,22 @@
                 }
             });
 
-            menuMusicTimeout = setTimeout(playMenuMusicLoop, (dur - 0.04) * 1000);
+            menuMusicTimeout = setTimeout(() => {
+                if (menuMusicGen === myGen) playMenuMusicLoop();
+            }, (dur - 0.04) * 1000);
         }
 
         function startMenuMusic() {
             stopMusic();
             if (menuMusicRunning) return;
+            menuMusicGen++;              // neue Generation → alle laufenden Loops ungültig
             menuMusicRunning = true;
             menuLoopStartTime = performance.now();
             playMenuMusicLoop();
         }
 
         function stopMenuMusic() {
+            menuMusicGen++;              // sofort alle vorausgeplanten Nodes "canceln"
             menuMusicRunning = false;
             if (menuMusicTimeout) { clearTimeout(menuMusicTimeout); menuMusicTimeout = null; }
         }
