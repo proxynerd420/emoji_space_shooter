@@ -938,7 +938,7 @@
 
         // ─── Name-Input nach Game Over ────────────────────────────────────────────
         function showNameInput() {
-            const level = Math.floor(state.score / 50) + 1;
+            const level = scoreToLevel(state.score);
             $niScoreText.textContent = `Score: ${state.score} | Level: ${level}`;
             $playerNameInput.value   = '';
             $nameInputPanel.classList.add('visible');
@@ -946,7 +946,7 @@
         }
 
         async function submitName() {
-            const level = Math.floor(state.score / 50) + 1;
+            const level = scoreToLevel(state.score);
             await saveHighscore($playerNameInput.value, state.score, level);
             $nameInputPanel.classList.remove('visible');
             $gameOver.style.display = 'none';
@@ -1415,10 +1415,17 @@
         }
 
         /** Berechnet aktuelle Schwierigkeit basierend auf Score */
+        /** Exponentielles Leveln: frühe Level schnell, spätere deutlich länger
+         *  Level 1→2: 12pts, 2→3: 36pts, 3→4: 60pts, 4→5: 84pts, ...
+         *  Formel: floor(sqrt(score / 12)) + 1  */
+        function scoreToLevel(score) {
+            return Math.floor(Math.sqrt(score / 12)) + 1;
+        }
+
         function getDifficulty() {
             const s = state.score;
             return {
-                level:              Math.floor(s / 50) + 1,
+                level:              scoreToLevel(s),
                 ufoSpeed:           Math.min(6,  UFO.speedBase         + s * 0.015),
                 bossSpeed:          Math.min(4,  BOSS.speedBase        + s * 0.01),
                 spawnRate:          Math.max(35, UFO.spawnRateBase     - s * 0.12),
@@ -1658,7 +1665,7 @@
         // ─── Score-Anzeige ────────────────────────────────────────────────────────
 
         function updateScoreDisplay() {
-            const level = Math.floor(state.score / 50) + 1;
+            const level = scoreToLevel(state.score);
             const text  = `Score: ${state.score} | Level: ${level}`;
             $score.innerText      = text;
             $finalScore.innerText = `Final ${text}`;
@@ -2741,7 +2748,7 @@
         }
 
         function checkLevelUpPopup() {
-            const level = Math.floor(state.score / 50) + 1;
+            const level = scoreToLevel(state.score);
             if (level > lastPopupLevel) {
                 lastPopupLevel = level;
                 playLevelUp();
@@ -4162,7 +4169,7 @@
 
         function getMusicBpm() {
             const base  = TRACKS[currentTrack].bpm;
-            const level = state?.score ? Math.floor(state.score / 50) + 1 : 1;
+            const level = state?.score ? scoreToLevel(state.score) : 1;
             return base * Math.pow(1.01, level - 1);
         }
 
