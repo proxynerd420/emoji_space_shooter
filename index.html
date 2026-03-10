@@ -1372,9 +1372,12 @@
                 gameOver: false,
                 frameCount: 0,
                 lastShotFrame: 0,
-                nextShotCooldown: 6,  // wird nach erstem Schuss randomisiert (6–12 Frames)
+                nextShotCooldown: 6,
                 hp: 3, maxHp: 5,
-                invincibleFrames: 0,   // kurze Unverwundbarkeit nach Hit
+                invincibleFrames: 0,
+                combo: 0,
+                comboMult: 1,
+                comboLastKillTime: 0,
                 buffs: { noCooldown: 0, spreadFire: 0, homing: 0, hyperspace: 0, shield: 0, slowTime: 0,
                          magnet: 0, blood: 0, ice: 0, rainbow: 0, storm: 0, satellite: 0 },
                 bloodHitCounter: 0,   // Treffer-Zähler für Blut-Powerup
@@ -1626,6 +1629,7 @@
 
             // Normaler Hit → roter Flash + Shake
             state.hp--;
+            resetCombo();
             triggerShake(10, 14);
             updateHeartHud();
             playHit();
@@ -2374,12 +2378,10 @@
                     const cx = c.x + c.size / 2;
                     const cy = c.y + c.size / 2;
                     spawnExplosion(cx, cy, Math.floor(20 + c.size * 0.3));
-                    state.score += c.score;
+                    registerKill(c.score, cx, cy);
                     state.stats.cometsDestroyed++;
                     triggerShake(5 + c.size * 0.1, 10);
-                    updateScoreDisplay();
 
-                    // Drop aus der Tier-Tabelle – Anzahl 💰 proportional zum Score-Wert
                     const dropType = c.drops[Math.floor(Math.random() * c.drops.length)];
                     if (dropType !== 'nothing') {
                         const count = Math.round(c.score / 5);
@@ -2544,12 +2546,10 @@
                     if (group[i].hp <= 0) {
                         spawnExplosion(cx, cy, 40);
                         group.splice(i, 1);
-                        state.score += scoreValue;
+                        registerKill(scoreValue, cx, cy);
                         state.stats.bossesKilled++;
                         triggerShake(14, 18);
                         spawnPopup('💥 BOSS DOWN!', cx - 60, cy - 40, '#ff4444', 26);
-                        updateScoreDisplay();
-                        // Boss: 10 score → 2× 💰 (score/5)
                         spawnMoneyDrops(2, cx, cy);
                     } else {
                         triggerShake(3, 6);
@@ -2565,11 +2565,10 @@
                     } else {
                         spawnExplosion(cx, cy, 25);
                         group.splice(i, 1);
-                        state.score += scoreValue;
+                        registerKill(scoreValue, cx, cy);
                         state.stats.ufosKilled++;
                         bloodRegenHit(cx, cy);
                         triggerShake(4, 8);
-                        updateScoreDisplay();
                         if (Math.random() < difficulty.powerUpChance) {
                             state.powerUps.push({ x: cx - POWERUP.size / 2, y: cy - POWERUP.size / 2, type: randomPowerUpType() });
                         }
@@ -2580,7 +2579,34 @@
             return false;
         }
 
-        /** Spawnt count 💰-Pickups leicht versetzt um (cx, cy) */
+        /** Combo registrieren – gibt den skalierten Score zurück */
+        function registerKill(baseScore, cx, cy) {
+            state.combo++;
+            state.comboMult = 1 + (state.combo - 1) * 0.5;
+            state.comboLastKillTime = performance.now();
+            const earned = Math.round(baseScore * state.comboMult);
+            state.score += earned;
+            updateScoreDisplay();
+            // Combo-Popup über dem Schiff
+            const sx = state.mouseX + SHIP.size / 2;
+            const sy = state.mouseY - 10;
+            if (state.combo >= 2) {
+                const color = state.comboMult >= 4 ? '#ff4444' :
+                              state.comboMult >= 3 ? '#ff8800' :
+                              state.comboMult >= 2 ? '#ffdd00' : '#ffffff';
+                spawnPopup(`x${state.comboMult.toFixed(1)} COMBO!`, sx - 40, sy - 30, color, 20);
+            }
+            return earned;
+        }
+
+        function resetCombo() {
+            if (state.combo >= 2) {
+                spawnPopup('COMBO BREAK 💔', state.mouseX + SHIP.size / 2 - 50,
+                           state.mouseY - 20, '#ff4444', 16);
+            }
+            state.combo = 0;
+            state.comboMult = 1;
+        }
         function spawnMoneyDrops(count, cx, cy) {
             for (let i = 0; i < count; i++) {
                 const angle  = (i / count) * Math.PI * 2;
@@ -3219,6 +3245,12 @@
                 const difficulty = getDifficulty();
 
                 updateBuffs(dt60);
+
+                // Combo-Timeout: kein Kill seit 5s → Reset
+                if (state.combo > 0 && performance.now() - state.comboLastKillTime > 5000) {
+                    resetCombo();
+                }
+
                 trySpawnEntities(difficulty, dt60);
                 trySpawnComet(difficulty, dt60);
                 updateLasers(dt60);
