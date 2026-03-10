@@ -416,6 +416,33 @@
         .menu-btn:active { transform: scale(0.97); }
         .menu-btn.danger { border-color: #ff4444; color: #ff8888; }
         .menu-btn.danger:hover { background: rgba(255,68,68,.15); box-shadow: 0 0 20px #ff4444; }
+        .menu-btn.cheat-btn { border-color: #ff88ff; color: #ff88ff; }
+        .menu-btn.cheat-btn:hover { background: rgba(255,136,255,.15); box-shadow: 0 0 20px #ff88ff; }
+        .menu-btn.cheat-btn.gp-focus { background: rgba(255,136,255,.2); box-shadow: 0 0 28px #ff88ff, 0 0 6px #ff88ff inset; }
+        /* Cheat Slots */
+        .cheat-slot {
+            width: 44px; height: 52px;
+            border: 2px solid rgba(255,136,255,.4);
+            border-radius: 8px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 18px; cursor: pointer;
+            background: rgba(255,136,255,.06);
+            transition: border-color .15s, background .15s;
+            user-select: none;
+        }
+        .cheat-slot.active {
+            border-color: #ff88ff;
+            background: rgba(255,136,255,.2);
+            box-shadow: 0 0 12px #ff88ff88;
+        }
+        .cheat-slot.locked { opacity: .35; cursor: default; }
+        @keyframes cheatShake {
+            0%,100% { transform: translateX(0); }
+            20%      { transform: translateX(-6px); }
+            40%      { transform: translateX(6px); }
+            60%      { transform: translateX(-4px); }
+            80%      { transform: translateX(4px); }
+        }
         .menu-btn.secondary { border-color: #4488ff; font-size: 15px; width: 240px; padding: 12px 0; }
         .menu-btn.secondary:hover { background: rgba(68,136,255,.15); box-shadow: 0 0 16px #4488ff; }
 
@@ -590,6 +617,7 @@
         <button class="menu-btn" id="btnPlay">▶ SPIELEN</button>
         <button class="menu-btn" id="btnHighscore">🏆 HIGHSCORES</button>
         <button class="menu-btn secondary" id="btnOptions">⚙️ OPTIONEN</button>
+        <button class="menu-btn cheat-btn" id="btnCheats">🕹️ CHEATS</button>
         <button class="menu-btn danger" id="btnQuit">✕ BEENDEN</button>
         <div id="gamepadStatus"></div>
     </div>
@@ -689,6 +717,28 @@
             <div class="shop-section-title">💎 Rare</div>
             <div class="shop-grid" id="shopGridRare"></div>
             <div class="shop-hint" id="shopHint">A / ✕ = Kaufen &nbsp;|&nbsp; B / ○ = Schließen &nbsp;|&nbsp; Y / △ = Schließen</div>
+        </div>
+    </div>
+
+    <!-- ═══ CHEAT-MENÜ ═══ -->
+    <div class="overlay-panel" id="cheatPanel">
+        <div class="panel-box">
+            <h2>🕹️ Cheat-Menü</h2>
+            <p id="cheatStatus" style="color:#ff4444;font-size:13px;text-align:center;margin:0 0 14px">
+                🔒 Gib den Konami-Code ein um fortzufahren
+            </p>
+            <div id="cheatSlots" style="display:flex;gap:8px;justify-content:center;margin-bottom:18px">
+            </div>
+            <div style="text-align:center;color:rgba(255,255,255,.4);font-size:12px;margin-bottom:16px">
+                ← → wechselt Slot &nbsp;|&nbsp; ↑ ↓ ändert Symbol &nbsp;|&nbsp; LB/RB (Controller)
+            </div>
+            <div id="cheatCodeList" style="margin-bottom:18px;font-size:12px;color:rgba(255,255,255,.45);text-align:center;line-height:1.8">
+                <!-- wird dynamisch befüllt -->
+            </div>
+            <div style="display:flex;gap:12px;justify-content:center">
+                <button class="menu-btn secondary" id="btnCheatActivate" style="width:160px">✅ Aktivieren</button>
+                <button class="menu-btn secondary" id="btnCheatBack" style="width:160px">← Zurück</button>
+            </div>
         </div>
     </div>
 
@@ -848,7 +898,171 @@
 
         let konamiActive = false; // session-only, kein localStorage
 
+        // ─── Konami-Code Listener ─────────────────────────────────────────────────
+        const KONAMI_SEQ = ['ArrowUp','ArrowUp','ArrowDown','ArrowDown',
+                            'ArrowLeft','ArrowRight','ArrowLeft','ArrowRight',
+                            'b','a'];
+        const SLOT_SYMBOLS = ['↑','↓','←','→','A','B'];
+        const SLOT_KEYS    = ['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','a','b'];
+
+        let konamiBuffer   = [];
+        let cheatSlotIndex = 0;  // aktiver Slot (0-9)
+        let cheatCode      = Array(10).fill(0); // Index in SLOT_SYMBOLS pro Slot
+
+        // Konami auf Tastatur
+        document.addEventListener('keydown', (e) => {
+            konamiBuffer.push(e.key);
+            if (konamiBuffer.length > 10) konamiBuffer.shift();
+            if (konamiBuffer.join(',') === KONAMI_SEQ.join(',')) {
+                konamiActive = true;
+                konamiBuffer = [];
+                spawnPopup('🕹️ CHEATS FREIGESCHALTET!', canvas.width/2 - 100, canvas.height/2, '#ff88ff', 20);
+                // Status-Text im Panel sofort aktualisieren falls offen
+                if (document.getElementById('cheatPanel').classList.contains('visible')) {
+                    renderCheatSlots();
+                }
+            }
+        });
+
+        // ─── Cheat-Codes Map ──────────────────────────────────────────────────────
+        // Reihenfolge bestimmt Freischalt-Reihenfolge (je ein neuer Platz 1 im HS)
+        const CHEAT_DEFS = [
+            { code: '↑↑↑↑↑↑↑↑↑↑', label: 'God Mode 🧀',           fn: () => { state.usedKonami = true; state.buffs.noCooldown = 999999; playCheatSuccess(); } },
+            { code: '←←←←→→→→↑↓', label: 'Max alle Buffs ⚡',      fn: () => { state.usedKonami = true; Object.keys(state.buffs).forEach(k => state.buffs[k] = BUFF_DURATION_FRAMES * 3); playCheatSuccess(); } },
+            { code: '↓↓↓↓↓↓↓↓↓↓', label: '+9999 Score 💰',         fn: () => { state.usedKonami = true; state.score += 9999; updateScoreDisplay(); playCheatSuccess(); } },
+            { code: '→←→←→←→←→←', label: 'Unendlich Schild 🛡️',   fn: () => { state.usedKonami = true; state.buffs.shield = 999999; playCheatSuccess(); } },
+            { code: 'ABABABABAB',   label: 'Debug permanent 🔧',     fn: () => { state.usedKonami = true; debugMode = true; document.getElementById('debug').style.display = 'block'; playCheatSuccess(); } },
+        ];
+        const CHEAT_MAP = Object.fromEntries(CHEAT_DEFS.map(d => [d.code, d]));
+
+        // Freigeschaltete Cheat-Indizes (session-only)
+        let unlockedCheats = [];
+
+        function playCheatSuccess() {
+            // Kurzer Jingle: aufsteigende Töne
+            try {
+                const ctx2 = getAudioContext();
+                if (!ctx2) return;
+                [0, 4, 7, 12].forEach((semi, i) => {
+                    const osc = ctx2.createOscillator();
+                    const gain = ctx2.createGain();
+                    osc.connect(gain); gain.connect(ctx2.destination);
+                    osc.frequency.value = 440 * Math.pow(2, semi / 12);
+                    osc.type = 'sine';
+                    const t = ctx2.currentTime + i * 0.1;
+                    gain.gain.setValueAtTime(0, t);
+                    gain.gain.linearRampToValueAtTime(0.18, t + 0.02);
+                    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.25);
+                    osc.start(t); osc.stop(t + 0.25);
+                });
+            } catch(e) {}
+        }
+
+        // ─── Cheat-Panel UI ───────────────────────────────────────────────────────
+        function renderCheatSlots() {
+            const container = document.getElementById('cheatSlots');
+            container.innerHTML = '';
+            for (let i = 0; i < 10; i++) {
+                const el = document.createElement('div');
+                el.className = 'cheat-slot' + (i === cheatSlotIndex ? ' active' : '');
+                el.textContent = SLOT_SYMBOLS[cheatCode[i]];
+                el.dataset.i = i;
+                el.addEventListener('click', () => { cheatSlotIndex = i; renderCheatSlots(); });
+                container.appendChild(el);
+            }
+            const status = document.getElementById('cheatStatus');
+            status.style.color = konamiActive ? '#00ff88' : '#ff4444';
+            status.textContent = konamiActive ? '✅ Konami aktiv – Code eingeben und Aktivieren drücken' : '🔒 Gib den Konami-Code ein um fortzufahren';
+
+            // Freigeschaltete Codes anzeigen
+            const list = document.getElementById('cheatCodeList');
+            if (unlockedCheats.length === 0) {
+                list.innerHTML = '';
+            } else {
+                list.innerHTML = unlockedCheats.map(idx => {
+                    const d = CHEAT_DEFS[idx];
+                    return `<div>${d.code} → ${d.label}</div>`;
+                }).join('');
+            }
+        }
+
+        function cheatSlotUp()    { cheatCode[cheatSlotIndex] = (cheatCode[cheatSlotIndex] + 1) % SLOT_SYMBOLS.length; renderCheatSlots(); }
+        function cheatSlotDown()  { cheatCode[cheatSlotIndex] = (cheatCode[cheatSlotIndex] + SLOT_SYMBOLS.length - 1) % SLOT_SYMBOLS.length; renderCheatSlots(); }
+        function cheatSlotNext()  { cheatSlotIndex = Math.min(9, cheatSlotIndex + 1); renderCheatSlots(); }
+        function cheatSlotPrev()  { cheatSlotIndex = Math.max(0, cheatSlotIndex - 1); renderCheatSlots(); }
+
+        function activateCheat() {
+            if (!konamiActive) {
+                if (!document.getElementById('cheatPanel').classList.contains('visible')) return;
+                const status = document.getElementById('cheatStatus');
+                status.style.animation = 'none';
+                status.offsetHeight; // reflow
+                status.style.animation = 'cheatShake 0.4s ease';
+                return;
+            }
+            const entered = cheatCode.map(i => SLOT_SYMBOLS[i]).join('');
+            const def = CHEAT_MAP[entered];
+            if (def) {
+                if (gamePhase === 'playing') {
+                    def.fn();
+                    // Optisches Feedback: Slots kurz grün aufleuchten
+                    document.querySelectorAll('.cheat-slot').forEach(el => {
+                        el.style.borderColor = '#00ff88';
+                        el.style.background  = 'rgba(0,255,136,.3)';
+                        setTimeout(() => { el.style.borderColor = ''; el.style.background = ''; }, 600);
+                    });
+                    spawnPopup('✅ ' + def.label, canvas.width/2 - 80, canvas.height/2 - 30, '#ff88ff', 22);
+                    // Code zurücksetzen für nächste Eingabe
+                    cheatCode = Array(10).fill(0);
+                    cheatSlotIndex = 0;
+                    renderCheatSlots();
+                } else {
+                    const status = document.getElementById('cheatStatus');
+                    status.style.color = '#ffdd00';
+                    status.textContent = '⚠️ Erst ins Spiel gehen, dann Cheat aktivieren!';
+                    setTimeout(() => renderCheatSlots(), 2500);
+                }
+            } else {
+                // Falscher Code: Slots rot aufleuchten
+                document.querySelectorAll('.cheat-slot').forEach(el => {
+                    el.style.borderColor = '#ff4444';
+                    el.style.background  = 'rgba(255,68,68,.25)';
+                    setTimeout(() => { el.style.borderColor = ''; el.style.background = ''; }, 500);
+                });
+                const status = document.getElementById('cheatStatus');
+                status.style.color = '#ff4444';
+                status.textContent = '❌ Unbekannter Code';
+                setTimeout(() => renderCheatSlots(), 1500);
+            }
+        }
+
+        function openCheatPanel() {
+            renderCheatSlots();
+            document.getElementById('startScreen').style.display = 'none';
+            document.getElementById('cheatPanel').classList.add('visible');
+        }
+        function closeCheatPanel() {
+            document.getElementById('cheatPanel').classList.remove('visible');
+            document.getElementById('startScreen').style.display = 'flex';
+        }
+
+        // Tastatur-Navigation im Cheat-Panel
+        document.addEventListener('keydown', (e) => {
+            if (!document.getElementById('cheatPanel').classList.contains('visible')) return;
+            if (e.key === 'ArrowUp')    { e.preventDefault(); cheatSlotUp(); }
+            if (e.key === 'ArrowDown')  { e.preventDefault(); cheatSlotDown(); }
+            if (e.key === 'ArrowLeft')  { e.preventDefault(); cheatSlotPrev(); }
+            if (e.key === 'ArrowRight') { e.preventDefault(); cheatSlotNext(); }
+            if (e.key === 'Enter')      activateCheat();
+            if (e.key === 'Escape')     closeCheatPanel();
+        });
+
+        document.getElementById('btnCheats').addEventListener('click', openCheatPanel);
+        document.getElementById('btnCheatBack').addEventListener('click', closeCheatPanel);
+        document.getElementById('btnCheatActivate').addEventListener('click', activateCheat);
+
         async function saveHighscore(name, score, level) {
+            const wasFirst = highscores.length === 0 || score > highscores[0]?.score;
             highscores.push({
                 name: (name.trim().toUpperCase().slice(0, 12)) || 'ANONYM',
                 score, level,
@@ -861,6 +1075,15 @@
             highscores.sort((a, b) => b.score - a.score);
             if (highscores.length > 100) highscores.length = 100;
             try { localStorage.setItem('ess_highscores', JSON.stringify(highscores)); } catch(e) {}
+
+            // Neuer Platz 1 → nächsten Cheat freischalten
+            if (wasFirst) {
+                const nextIdx = unlockedCheats.length;
+                if (nextIdx < CHEAT_DEFS.length && !unlockedCheats.includes(nextIdx)) {
+                    unlockedCheats.push(nextIdx);
+                    spawnPopup(`🕹️ NEUER CHEAT FREIGESCHALTET!`, canvas.width/2 - 110, canvas.height/2 - 60, '#ff88ff', 18);
+                }
+            }
         }
 
         function renderHighscoreTable() {
@@ -3551,7 +3774,7 @@
         // Beim Wechsel des aktiven Menüs wird der Index auf 0 zurückgesetzt.
 
         const GP_MENUS = {
-            start:     ['btnPlay', 'btnHighscore', 'btnOptions', 'btnQuit'],
+            start:     ['btnPlay', 'btnHighscore', 'btnOptions', 'btnCheats', 'btnQuit'],
             highscore: ['btnHsBack'],
             options:   ['btnOptBack', 'btnResetHS'],
             nameinput: ['btnSaveName', 'btnSkipName'],
@@ -3567,6 +3790,7 @@
             if ($nameInputPanel.classList.contains('visible')) return 'nameinput';
             if ($optionsPanel.classList.contains('visible'))   return 'options';
             if ($highscorePanel.classList.contains('visible')) return 'highscore';
+            if (document.getElementById('cheatPanel').classList.contains('visible')) return 'cheat';
             if (shopOpen)                                       return 'shop';
             if (paused)                                         return 'pause';
             if (gamePhase === 'start')                         return 'start';
@@ -3609,6 +3833,7 @@
             if ($nameInputPanel.classList.contains('visible'))        { document.getElementById('btnSkipName').click(); }
             else if ($optionsPanel.classList.contains('visible'))     { document.getElementById('btnOptBack').click(); }
             else if ($highscorePanel.classList.contains('visible'))   { document.getElementById('btnHsBack').click(); }
+            else if (document.getElementById('cheatPanel').classList.contains('visible')) { closeCheatPanel(); }
         }
 
         // Fokus setzen wenn ein Panel geöffnet/geschlossen wird
@@ -3616,8 +3841,10 @@
         const _origBtnHighscore = document.getElementById('btnHighscore').onclick;
         document.getElementById('btnHighscore').addEventListener('click', () => setTimeout(() => gpSetFocus('highscore', 0), 0));
         document.getElementById('btnOptions')  .addEventListener('click', () => setTimeout(() => gpSetFocus('options',   0), 0));
+        document.getElementById('btnCheats')   .addEventListener('click', () => setTimeout(() => gpSetFocus('cheat',     0), 0));
         document.getElementById('btnHsBack')   .addEventListener('click', () => setTimeout(() => gpSetFocus('start',     1), 0));
         document.getElementById('btnOptBack')  .addEventListener('click', () => setTimeout(() => gpSetFocus('start',     2), 0));
+        document.getElementById('btnCheatBack').addEventListener('click', () => setTimeout(() => gpSetFocus('start',     3), 0));
         document.getElementById('btnSaveName') .addEventListener('click', () => setTimeout(() => gpSetFocus('start',     0), 0));
         document.getElementById('btnSkipName') .addEventListener('click', () => setTimeout(() => gpSetFocus('start',     0), 0));
 
@@ -3690,6 +3917,30 @@
             if (menuKey) {
                 // Y / △ schließt Shop auch von hier aus
                 if (gpButtonPressed(pad, 3) && menuKey === 'shop') { closeShop(); return; }
+
+                // Cheat-Panel: D-Pad/Stick navigiert Slots, LB/RB wechselt Slot
+                if (menuKey === 'cheat') {
+                    const stickUp    = applyDeadzone(pad.axes[1] ?? 0) < -0.5;
+                    const stickDown  = applyDeadzone(pad.axes[1] ?? 0) >  0.5;
+                    const stickLeft  = applyDeadzone(pad.axes[0] ?? 0) < -0.5;
+                    const stickRight = applyDeadzone(pad.axes[0] ?? 0) >  0.5;
+                    const upPressed    = gpButtonPressed(pad, 12) || (stickUp    && !gpPrevButtons['stickUp']);
+                    const downPressed  = gpButtonPressed(pad, 13) || (stickDown  && !gpPrevButtons['stickDown']);
+                    const leftPressed  = gpButtonPressed(pad, 14) || (stickLeft  && !gpPrevButtons['stickLeft']);
+                    const rightPressed = gpButtonPressed(pad, 15) || (stickRight && !gpPrevButtons['stickRight']);
+                    gpPrevButtons['stickUp']    = stickUp;
+                    gpPrevButtons['stickDown']  = stickDown;
+                    gpPrevButtons['stickLeft']  = stickLeft;
+                    gpPrevButtons['stickRight'] = stickRight;
+
+                    if (upPressed)    cheatSlotUp();
+                    if (downPressed)  cheatSlotDown();
+                    if (leftPressed || gpButtonPressed(pad, 4))  cheatSlotPrev(); // LB
+                    if (rightPressed || gpButtonPressed(pad, 5)) cheatSlotNext(); // RB
+                    if (gpButtonPressed(pad, 0)) activateCheat();  // A
+                    if (gpButtonPressed(pad, 1)) closeCheatPanel(); // B
+                    return;
+                }
 
                 // Shop: 2D-Grid-Navigation mit D-Pad / Stick
                 if (menuKey === 'shop') {
