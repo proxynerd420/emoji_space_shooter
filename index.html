@@ -1388,10 +1388,12 @@
                          magnet: 0, blood: 0, ice: 0, rainbow: 0, storm: 0, satellite: 0 },
                 bloodHitCounter: 0,   // Treffer-Zähler für Blut-Powerup
                 rainbowHue: 0,        // aktueller Farbton für Rainbow-Laser
-                satelliteAngle: 0,    // Rotationswinkel des Satelliten
-                satelliteLastShotFrame: 0, // Frame des letzten Satelliten-Schusses
-                satelliteLasers: [],  // [ {x,y,tx,ty,progress,targetId} ]
-                spawnWarnings: [],    // [ {x, y, life, spawnFrame, enemyRef} ] für Satellit-Warnungen
+                satelliteAngle: 0,
+                satelliteLastShotFrame: 0,
+                satelliteCount: 0,
+                satelliteLastShotFrames: [],
+                satelliteLasers: [],
+                spawnWarnings: [],
                 stats: {
                     ufosKilled: 0,
                     bossesKilled: 0,
@@ -1951,7 +1953,12 @@
             buffs.ice           = Math.max(0, buffs.ice        - dt60);
             buffs.rainbow       = Math.max(0, buffs.rainbow    - dt60);
             buffs.storm         = Math.max(0, buffs.storm      - dt60);
+            const prevSat = buffs.satellite;
             buffs.satellite     = Math.max(0, buffs.satellite  - dt60);
+            if (prevSat > 0 && buffs.satellite <= 0) {
+                state.satelliteCount = 0;
+                state.satelliteLastShotFrames = [];
+            }
             state.invincibleFrames = Math.max(0, state.invincibleFrames - dt60);
         }
 
@@ -2803,7 +2810,22 @@
             slowTime:   (px, py) => { stackBuff('slowTime',   SLOWTIME_DURATION_FRAMES, SLOWTIME_MAX_STACK); spawnPopup('⏳ SLOW MO!', px, py, '#aa88ff'); },
             ice:        (px, py) => { stackBuff('ice',        BUFF_DURATION_FRAMES);     spawnPopup('❄️ EIS!',        px, py, '#88ddff'); },
             storm:      (px, py) => { stackBuff('storm',      BUFF_DURATION_FRAMES);     spawnPopup('🌀 STURM!',      px, py, '#aaaaff'); },
-            satellite:  (px, py) => { stackBuff('satellite',  BUFF_DURATION_FRAMES); state.satelliteAngle = 0; spawnPopup('🛰️ SATELLIT!', px, py, '#00ffcc'); },
+            satellite:  (px, py) => {
+                if (state.satelliteCount < 7) {
+                    state.satelliteCount++;
+                    // Dauer nur beim ersten Pickup setzen, danach nicht stacken
+                    if (state.buffs.satellite <= 0) state.buffs.satellite = BUFF_DURATION_FRAMES;
+                    // Cooldown-Array auf neue Anzahl erweitern
+                    while (state.satelliteLastShotFrames.length < state.satelliteCount)
+                        state.satelliteLastShotFrames.push(0);
+                    const label = state.satelliteCount > 1 ? `🛰️ x${state.satelliteCount} SATELLIT!` : '🛰️ SATELLIT!';
+                    spawnPopup(label, px, py, '#00ffcc');
+                } else {
+                    // Max erreicht → Dauer auffüllen
+                    state.buffs.satellite = BUFF_DURATION_FRAMES;
+                    spawnPopup('🛰️ MAX ORBIT!', px, py, '#00ffcc');
+                }
+            },
             blood:      (px, py) => { const wasInactive = state.buffs.blood <= 0; stackBuff('blood', BUFF_DURATION_FRAMES); if (wasInactive) state.bloodHitCounter = 0; spawnPopup('🩸 BLUT!', px, py, '#cc0000'); },
             rainbow:    (px, py) => { stackBuff('rainbow',    BUFF_DURATION_FRAMES);     spawnPopup('🌈 RAINBOW!',    px, py, `hsl(${Math.random()*360},100%,65%)`, 24); },
             hyperspace: (px, py) => { activateHyperspace();                              spawnPopup('🌌 HYPERSPACE!', px, py, '#4488ff', 26); },
@@ -3100,27 +3122,17 @@
         }
 
         function drawSatelliteAndWarnings(dt60 = 1) {
-            if (state.buffs.satellite <= 0) return;
+            if (state.buffs.satellite <= 0 || state.satelliteCount <= 0) return;
 
             const cx = state.mouseX + SHIP.size / 2;
             const cy = state.mouseY + SHIP.size / 2;
             const orbitR = SHIP.size * 2.2;
+            const count  = state.satelliteCount;
 
-            // Satellit kreist um den Spieler
+            // Basiswinkel dreht sich kontinuierlich
             state.satelliteAngle = (state.satelliteAngle + 0.04 * dt60) % (Math.PI * 2);
-            const sx = cx + Math.cos(state.satelliteAngle) * orbitR;
-            const sy = cy + Math.sin(state.satelliteAngle) * orbitR;
 
-            ctx.save();
-            ctx.font         = '20px Arial';
-            ctx.textAlign    = 'center';
-            ctx.textBaseline = 'middle';
-            ctx.shadowColor  = '#00ffcc';
-            ctx.shadowBlur   = 6;
-            ctx.fillText('🛰️', sx, sy);
-            ctx.restore();
-
-            // Orbit-Ring (subtil)
+            // Orbit-Ring (subtil, einmal)
             ctx.save();
             ctx.beginPath();
             ctx.arc(cx, cy, orbitR, 0, Math.PI * 2);
@@ -3129,37 +3141,53 @@
             ctx.stroke();
             ctx.restore();
 
-            // ── Satellit: Auto-Targeting ─────────────────────────────────────
-            // Schießt auf den nächsten Feind der seit ≥ 0.5s (30 Frames) onscreen ist
-            // Cooldown: 90 Frames (1.5s)
-            const SAT_COOLDOWN    = 90;
-            const SAT_ON_SCREEN_FRAMES = 30; // 0.5s bei 60fps
-            if (state.frameCount - state.satelliteLastShotFrame >= SAT_COOLDOWN) {
-                // Alle Feinde sammeln die seit mind. 0.5s onscreen sind
-                const candidates = [
-                    ...state.ufos.filter(e => e.x < canvas.width && e.onScreenSince !== undefined &&
-                        state.frameCount - e.onScreenSince >= SAT_ON_SCREEN_FRAMES),
-                    ...state.bosses.filter(e => e.x < canvas.width && e.onScreenSince !== undefined &&
-                        state.frameCount - e.onScreenSince >= SAT_ON_SCREEN_FRAMES),
-                ];
-                if (candidates.length > 0) {
-                    // Nächsten Feind zum Satelliten wählen
-                    const target = candidates.reduce((best, e) => {
-                        const ex = e.x + (e.size ?? UFO.size) / 2;
-                        const ey = e.y + (e.size ?? UFO.size) / 2;
-                        const d  = Math.hypot(ex - sx, ey - sy);
-                        const bd = Math.hypot((best.x + (best.size??UFO.size)/2) - sx,
-                                              (best.y + (best.size??UFO.size)/2) - sy);
-                        return d < bd ? e : best;
-                    });
-                    state.satelliteLasers.push({
-                        x: sx, y: sy,
-                        tx: target.x + (target.size ?? UFO.size) / 2,
-                        ty: target.y + (target.size ?? UFO.size) / 2,
-                        target, progress: 0,
-                    });
-                    state.satelliteLastShotFrame = state.frameCount;
-                    playLaser();
+            const SAT_COOLDOWN        = 90;
+            const SAT_ON_SCREEN_FRAMES = 30;
+
+            for (let s = 0; s < count; s++) {
+                // Gleichmäßige Verteilung: 1 Sat = 0°, 2 Sats = 0°/180°, 3 = 0°/120°/240°
+                const angle = state.satelliteAngle + s * (Math.PI * 2 / count);
+                const sx = cx + Math.cos(angle) * orbitR;
+                const sy = cy + Math.sin(angle) * orbitR;
+
+                // Satellit zeichnen
+                ctx.save();
+                ctx.font         = '20px Arial';
+                ctx.textAlign    = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.shadowColor  = '#00ffcc';
+                ctx.shadowBlur   = 6;
+                ctx.fillText('🛰️', sx, sy);
+                ctx.restore();
+
+                // Eigener Cooldown pro Satellit
+                if (!state.satelliteLastShotFrames[s]) state.satelliteLastShotFrames[s] = 0;
+                if (state.frameCount - state.satelliteLastShotFrames[s] >= SAT_COOLDOWN) {
+                    const candidates = [
+                        ...state.ufos.filter(e => e.x < canvas.width && e.onScreenSince !== undefined &&
+                            state.frameCount - e.onScreenSince >= SAT_ON_SCREEN_FRAMES),
+                        ...state.bosses.filter(e => e.x < canvas.width && e.onScreenSince !== undefined &&
+                            state.frameCount - e.onScreenSince >= SAT_ON_SCREEN_FRAMES),
+                        ...state.elites.filter(e => e.x < canvas.width),
+                    ];
+                    if (candidates.length > 0) {
+                        const target = candidates.reduce((best, e) => {
+                            const ex = e.x + (e.size ?? UFO.size) / 2;
+                            const ey = e.y + (e.size ?? UFO.size) / 2;
+                            const d  = Math.hypot(ex - sx, ey - sy);
+                            const bd = Math.hypot((best.x + (best.size ?? UFO.size) / 2) - sx,
+                                                  (best.y + (best.size ?? UFO.size) / 2) - sy);
+                            return d < bd ? e : best;
+                        });
+                        state.satelliteLasers.push({
+                            x: sx, y: sy,
+                            tx: target.x + (target.size ?? UFO.size) / 2,
+                            ty: target.y + (target.size ?? UFO.size) / 2,
+                            target, progress: 0,
+                        });
+                        state.satelliteLastShotFrames[s] = state.frameCount;
+                        playLaser();
+                    }
                 }
             }
 
