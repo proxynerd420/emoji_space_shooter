@@ -3683,17 +3683,29 @@
             let pads = [];
             try { pads = navigator.getGamepads ? [...navigator.getGamepads()] : []; } catch(e) {}
 
-            // Deduplizierung: Xbox 360 Wireless Receiver meldet sich doppelt.
-            // Vendor/Product-IDs aus dem ID-String extrahieren (z.B. "045e-028e" oder
-            // "Vendor: 045e Product: 028e") und nur den ersten Treffer pro Gerät behalten.
-            const seen = new Set();
+            // Phantom-Slots und Doppel-Registrierungen herausfiltern.
+            // Manche Controller (z.B. PS4-kompatible via Bluetooth) registrieren sich
+            // doppelt: einmal als rohes HID-Gerät und einmal als virtueller XInput-Controller.
+            // Erkennungsmerkmal: zwei Pads mit identischen Achsenwerten = selbes physisches Gerät.
+            // In diesem Fall bevorzugen wir den XInput-Eintrag (bessere Browser-Kompatibilität).
+            const realPads = pads.filter(p => p && p.connected);
             const uniquePads = [];
-            for (const pad of pads) {
-                if (!pad || !pad.connected) continue;
-                // ID normalisieren: alle Hex-Zahlen extrahieren als Fingerprint
-                const vpMatch = pad.id.match(/([0-9a-f]{4})[^0-9a-f]*([0-9a-f]{4})/i);
-                const key = vpMatch ? `${vpMatch[1]}-${vpMatch[2]}` : pad.id.toLowerCase().replace(/\s+/g, '');
-                if (!seen.has(key)) { seen.add(key); uniquePads.push(pad); }
+            for (let i = 0; i < realPads.length; i++) {
+                const a = realPads[i];
+                let isDuplicate = false;
+                for (let j = 0; j < i; j++) {
+                    const b = realPads[j];
+                    if (a.axes.length === b.axes.length &&
+                        a.axes.every((v, k) => Math.abs(v - b.axes[k]) < 0.01)) {
+                        isDuplicate = true;
+                        // XInput-Eintrag bevorzugen – den non-XInput ersetzen falls nötig
+                        const aIsXInput = a.id.toLowerCase().includes('xinput');
+                        const bIsXInput = b.id.toLowerCase().includes('xinput');
+                        if (aIsXInput && !bIsXInput) uniquePads[j] = a;
+                        break;
+                    }
+                }
+                if (!isDuplicate) uniquePads.push(a);
             }
 
             let slot = 0;
