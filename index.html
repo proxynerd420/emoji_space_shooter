@@ -938,15 +938,15 @@
 
         // ─── Name-Input nach Game Over ────────────────────────────────────────────
         function showNameInput() {
-            const level = scoreToLevel(state.score);
-            $niScoreText.textContent = `Score: ${state.score} | Level: ${level}`;
+            const level = scoreToLevel();
+            $niScoreText.textContent = `Score: ${state.score} | ☠️ ${getTotalKills()} Kills | Level: ${level}`;
             $playerNameInput.value   = '';
             $nameInputPanel.classList.add('visible');
             setTimeout(() => $playerNameInput.focus(), 80);
         }
 
         async function submitName() {
-            const level = scoreToLevel(state.score);
+            const level = scoreToLevel();
             await saveHighscore($playerNameInput.value, state.score, level);
             $nameInputPanel.classList.remove('visible');
             $gameOver.style.display = 'none';
@@ -1418,17 +1418,23 @@
         }
 
         /** Berechnet aktuelle Schwierigkeit basierend auf Score */
-        /** Exponentielles Leveln: frühe Level schnell, spätere deutlich länger
-         *  Level 1→2: 12pts, 2→3: 36pts, 3→4: 60pts, 4→5: 84pts, ...
-         *  Formel: floor(sqrt(score / 12)) + 1  */
-        function scoreToLevel(score) {
-            return Math.floor(Math.sqrt(score / 12)) + 1;
+        /** Exponentielles Leveln basierend auf Kills (combo-unabhängig)
+         *  Kills 1→2: 3, 2→3: 12, 3→4: 27, 4→5: 48 ...
+         *  Formel: floor(sqrt(kills / 3)) + 1  */
+        function scoreToLevel() {
+            return Math.floor(Math.sqrt(getTotalKills() / 3)) + 1;
+        }
+
+        function getTotalKills() {
+            return (state.stats.ufosKilled || 0)
+                 + (state.stats.cometsDestroyed || 0)
+                 + (state.stats.bossesKilled || 0);
         }
 
         function getDifficulty() {
             const s = state.score;
             return {
-                level:              scoreToLevel(s),
+                level:              scoreToLevel(),
                 ufoSpeed:           Math.min(6,  UFO.speedBase         + s * 0.015),
                 bossSpeed:          Math.min(4,  BOSS.speedBase        + s * 0.01),
                 spawnRate:          Math.max(35, UFO.spawnRateBase     - s * 0.12),
@@ -1669,10 +1675,11 @@
         // ─── Score-Anzeige ────────────────────────────────────────────────────────
 
         function updateScoreDisplay() {
-            const level = scoreToLevel(state.score);
-            const text  = `Score: ${state.score} | Level: ${level}`;
+            const level = scoreToLevel();
+            const kills = getTotalKills();
+            const text  = `Score: ${state.score} | ☠️ ${kills} | Level: ${level}`;
             $score.innerText      = text;
-            $finalScore.innerText = `Final ${text}`;
+            $finalScore.innerText = `Final Score: ${state.score} | ☠️ ${kills} Kills | Level: ${level}`;
         }
 
         // ─── Sterne ───────────────────────────────────────────────────────────────
@@ -2774,7 +2781,7 @@
         }
 
         function checkLevelUpPopup() {
-            const level = scoreToLevel(state.score);
+            const level = scoreToLevel();
             if (level > lastPopupLevel) {
                 lastPopupLevel = level;
                 playLevelUp();
@@ -4201,7 +4208,7 @@
 
         function getMusicBpm() {
             const base  = TRACKS[currentTrack].bpm;
-            const level = state?.score ? scoreToLevel(state.score) : 1;
+            const level = state?.score ? scoreToLevel() : 1;
             return base * Math.pow(1.01, level - 1);
         }
 
