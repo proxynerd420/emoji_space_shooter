@@ -601,12 +601,12 @@
             <div class="hs-filters">
                 <button class="hs-filter-btn active" data-sort="score">Nach Score</button>
                 <button class="hs-filter-btn" data-sort="level">Nach Level</button>
-                <button class="hs-filter-btn" data-sort="date">Neueste</button>
+                <button class="hs-filter-btn" data-sort="kills">Nach Kills</button>
             </div>
             <table class="hs-table">
                 <thead>
                     <tr>
-                        <th>#</th><th>NAME</th><th>SCORE</th><th>LEVEL</th><th>DATUM</th>
+                        <th>#</th><th>NAME</th><th>SCORE</th><th>LEVEL</th><th>☠️ KILLS</th>
                     </tr>
                 </thead>
                 <tbody id="hsTableBody"></tbody>
@@ -851,6 +851,7 @@
             highscores.push({
                 name: (name.trim().toUpperCase().slice(0, 12)) || 'ANONYM',
                 score, level,
+                kills: getTotalKills(),
                 debug:  debugUsed,
                 cheat:  state.usedKonami ?? false,
                 date: new Date().toLocaleDateString('de-DE', { day:'2-digit', month:'2-digit', year:'2-digit' })
@@ -864,7 +865,7 @@
             const sorted = [...highscores].sort((a, b) =>
                 hsSort === 'score' ? b.score - a.score :
                 hsSort === 'level' ? b.level - a.level :
-                highscores.indexOf(b) - highscores.indexOf(a));
+                (b.kills || 0) - (a.kills || 0));
             if (sorted.length === 0) {
                 $hsTableBody.innerHTML = '<tr><td colspan="5" class="hs-empty">Noch keine Eintr\u00e4ge. Spiel los! 🚀</td></tr>';
                 return;
@@ -880,7 +881,7 @@
                     <td>${prefix}${e.name}${suffix}</td>
                     <td><strong>${e.score}</strong></td>
                     <td>Lvl ${e.level}</td>
-                    <td style="color:rgba(255,255,255,.35);font-size:12px">${e.date}</td>
+                    <td style="color:rgba(255,255,255,.55);font-size:13px">☠️ ${e.kills ?? '–'}</td>
                 </tr>`;
             }).join('');
         }
