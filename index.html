@@ -3682,12 +3682,25 @@
         function updateGamepadStatus() {
             let pads = [];
             try { pads = navigator.getGamepads ? [...navigator.getGamepads()] : []; } catch(e) {}
-            let slot = 0;
+
+            // Deduplizierung: Xbox 360 Wireless Receiver meldet sich doppelt.
+            // Vendor/Product-IDs aus dem ID-String extrahieren (z.B. "045e-028e" oder
+            // "Vendor: 045e Product: 028e") und nur den ersten Treffer pro Gerät behalten.
+            const seen = new Set();
+            const uniquePads = [];
             for (const pad of pads) {
-                if (pad && pad.connected) { gpSlots[slot] = pad; slot++; }
+                if (!pad || !pad.connected) continue;
+                // ID normalisieren: alle Hex-Zahlen extrahieren als Fingerprint
+                const vpMatch = pad.id.match(/([0-9a-f]{4})[^0-9a-f]*([0-9a-f]{4})/i);
+                const key = vpMatch ? `${vpMatch[1]}-${vpMatch[2]}` : pad.id.toLowerCase().replace(/\s+/g, '');
+                if (!seen.has(key)) { seen.add(key); uniquePads.push(pad); }
+            }
+
+            let slot = 0;
+            for (const pad of uniquePads) {
+                gpSlots[slot++] = pad;
                 if (slot >= 2) break;
             }
-            // Rest leeren
             for (let i = slot; i < 2; i++) gpSlots[i] = null;
 
             const el = document.getElementById('gamepadStatus');
