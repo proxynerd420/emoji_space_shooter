@@ -4709,41 +4709,41 @@
         }
         // ─── ROADMAP / GEPLANTE FEATURES ─────────────────────────────────────────
         //
-        // ┌─────────────────────────────────────────────────────────────────────┐
-        // │ CHEAT-MENÜ (Konami-Code + Custom Codes)                             │
-        // ├─────────────────────────────────────────────────────────────────────┤
-        // │ AKTIVIERUNG:                                                        │
-        // │   Konami-Code: ↑↑↓↓←→←→BA (klassisch, 10 Tasten)                 │
-        // │   → Versteckter Menüpunkt in den Optionen wird sichtbar            │
-        // │   → Bleibt sichtbar bis Seite neu geladen wird (kein localStorage) │
-        // │   → Konami-Nutzung setzt state.usedKonami = true                   │
-        // │   → Highscore-Eintrag bekommt Flag: cheat: true                    │
-        // │   → Darstellung in Highscore-Tabelle: 🧀 (roter Tint) NAME 🧀      │
-        // │     (debug-Flag = gelber Käse, cheat-Flag = roter Käse)            │
-        // │                                                                     │
-        // │ CHEAT-EINGABE:                                                      │
-        // │   12 Slots, jeder scrollbar durch: ↑ ↓ ← → A B                    │
-        // │   → Tastatur + Gamepad D-Pad navigierbar                           │
-        // │   → LB/RB wechselt aktiven Slot, D-Pad ändert Symbol              │
-        // │   → "Aktivieren"-Button bestätigt den eingegebenen Code            │
-        // │   → Solange Konami nicht aktiv: "Bitte erst Konami-Code eingeben!" │
-        // │                                                                     │
-        // │ GEPLANTE CODES (Beispiele):                                        │
-        // │   ↑↑↑↑↑↑↑↑↑↑↑↑  → God Mode (Käse-Buff permanent)                │
-        // │   ←←←←→→→→ABAB  → Max alle Buffs                                 │
-        // │   ↓↓↓↓↓↓↓↓↓↓↓↓  → Max Score (+9999)                             │
-        // │   →←→←→←→←→←→←  → Unendlich Schilde                              │
-        // │   AABBABABABABAB → Debug-Modus permanent                           │
-        // │   (weitere frei definierbar)                                       │
-        // │                                                                     │
-        // │ IMPLEMENTATION:                                                     │
-        // │   - Konami-Listener auf keydown + gamepad (10-Tasten-Buffer)       │
-        // │   - let konamiActive = false (session-only)                        │
-        // │   - Cheat-Map als Object: code-string → effect-function            │
-        // │   - UI: 12× Scroll-Widget mit ↑/↓ Buttons + Symbol-Anzeige        │
-        // │   - saveHighscore() prüft state.usedKonami → cheat: true          │
-        // │   - renderHighscoreTable(): cheat-Flag → rotes Käse-Emoji         │
-        // └─────────────────────────────────────────────────────────────────────┘
+        // ┌────────────────────────────────────────────────────────────────────────┐
+        // │ CHEAT-MENÜ (Konami-Code + Custom Codes)                                │
+        // ├────────────────────────────────────────────────────────────────────────┤
+        // │ AKTIVIERUNG:                                                           │
+        // │   Konami-Code: ↑↑↓↓←→←→BA (klassisch, 10 Tasten)                       │
+        // │   → Versteckter Menüpunkt in den Optionen wird sichtbar                │
+        // │   → Bleibt sichtbar bis Seite neu geladen wird (kein localStorage)     │
+        // │   → Konami-Nutzung setzt state.usedKonami = true                       │
+        // │   → Highscore-Eintrag bekommt Flag: cheat: true                        │
+        // │   → Darstellung in Highscore-Tabelle: 🧀 (roter Tint) NAME 🧀         │
+        // │     (debug-Flag = gelber Käse, cheat-Flag = roter Käse)                │
+        // │                                                                        │
+        // │ CHEAT-EINGABE:                                                         │
+        // │   10 Slots, jeder scrollbar durch: ↑ ↓ ← → A B                         │
+        // │   → Tastatur + Gamepad D-Pad navigierbar                               │
+        // │   → LB/RB wechselt aktiven Slot, D-Pad ändert Symbol                   │
+        // │   → "Aktivieren"-Button bestätigt den eingegebenen Code                │
+        // │   → Solange Konami nicht aktiv: "Bitte erst Konami-Code eingeben!"     │
+        // │                                                                        │
+        // │ GEPLANTE CODES (Beispiele):                                            │
+        // │   ↑↑↑↑↑↑↑↑↑↑↑↑  → God Mode (Käse-Buff permanent)                       │
+        // │   ←←←←→→→→ABAB  → Max alle Buffs                                       │
+        // │   ↓↓↓↓↓↓↓↓↓↓↓↓  → Max Score (+9999)                                    │
+        // │   →←→←→←→←→←→←  → Unendlich Schilde                                    │
+        // │   AABBABABABABAB → Debug-Modus permanent                               │
+        // │   (weitere frei definierbar)                                           │
+        // │                                                                        │
+        // │ IMPLEMENTATION:                                                        │
+        // │   - Konami-Listener auf keydown + gamepad (10-Tasten-Buffer)           │
+        // │   - let konamiActive = false (session-only)                            │
+        // │   - Cheat-Map als Object: code-string → effect-function                │
+        // │   - UI: 12× Scroll-Widget mit ↑/↓ Buttons + Symbol-Anzeige             │
+        // │   - saveHighscore() prüft state.usedKonami → cheat: true               │
+        // │   - renderHighscoreTable(): cheat-Flag → rotes Käse-Emoji              │
+        // └────────────────────────────────────────────────────────────────────────┘
 
         // ─── Startmenü-Soundtrack: EPIC SPACE MISSION ────────────────────────────
         //
