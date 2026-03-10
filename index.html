@@ -1398,6 +1398,7 @@
                 alienLasers: [],
                 ufos: [],
                 bosses: [],
+                elites: [],
                 comets: [],
                 powerUps: [],
                 explosions: [],
@@ -1894,18 +1895,38 @@
                 });
                 if (state._pendingWarning) { state._pendingWarning.enemyRef = state.bosses[state.bosses.length-1]; state._pendingWarning = null; }
             } else {
-                const variantKey = UFO_VARIANT_KEYS[Math.floor(Math.random() * UFO_VARIANT_KEYS.length)];
-                const variant    = UFO_VARIANTS[variantKey];
-                state.ufos.push({
-                    x: canvas.width,
-                    y: spawnY,
-                    vy: randomVy * variant.zigzagMult,
-                    lastShotFrame: 0,
-                    shotCooldown: difficulty.shotCooldownMin + Math.random() * difficulty.shotCooldownExtra,
-                    variantKey,
-                    variant
-                });
-                if (state._pendingWarning) { state._pendingWarning.enemyRef = state.ufos[state.ufos.length-1]; state._pendingWarning = null; }
+                // 15% Chance auf Elite wenn < 2 Elites on screen und score > 20
+                const spawnElite = state.elites.length < 2
+                    && state.score >= 20
+                    && Math.random() < 0.15;
+
+                if (spawnElite) {
+                    state.elites.push({
+                        x: canvas.width,
+                        y: spawnY,
+                        vy: randomVy * 1.5,
+                        hp: 3,
+                        maxHp: 3,
+                        lastShotFrame: 0,
+                        shotCooldown: difficulty.shotCooldownMin * 0.8,
+                        _erraticAcc: 0,
+                        _erraticInterval: 15 + Math.random() * 20,
+                        _glowAnim: 0
+                    });
+                } else {
+                    const variantKey = UFO_VARIANT_KEYS[Math.floor(Math.random() * UFO_VARIANT_KEYS.length)];
+                    const variant    = UFO_VARIANTS[variantKey];
+                    state.ufos.push({
+                        x: canvas.width,
+                        y: spawnY,
+                        vy: randomVy * variant.zigzagMult,
+                        lastShotFrame: 0,
+                        shotCooldown: difficulty.shotCooldownMin + Math.random() * difficulty.shotCooldownExtra,
+                        variantKey,
+                        variant
+                    });
+                    if (state._pendingWarning) { state._pendingWarning.enemyRef = state.ufos[state.ufos.length-1]; state._pendingWarning = null; }
+                }
             }
         }
 
@@ -2224,6 +2245,105 @@
             ufo.lastShotFrame = state.frameCount;
         }
 
+        function drawElite(elite) {
+            const size = UFO.size * 1.5;
+            const cx   = elite.x + size / 2;
+            const cy   = elite.y + size / 2;
+
+            // Pulsierender Glow: shadowBlur schwingt zwischen 14 und 30
+            elite._glowAnim = (elite._glowAnim || 0) + 0.08;
+            const pulse = 14 + Math.sin(elite._glowAnim) * 10;
+
+            // HP-Farbe: rot (3HP) → orange (2HP) → gelb (1HP)
+            const glowColor = elite.hp === 3 ? '#ff2200'
+                            : elite.hp === 2 ? '#ff8800'
+                            :                  '#ffdd00';
+
+            ctx.save();
+            ctx.textAlign    = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.shadowColor  = glowColor;
+            ctx.shadowBlur   = pulse;
+            ctx.font = `${size}px Arial`;
+            ctx.fillText('🛸', cx, cy);
+
+            // 👽 Pilot
+            ctx.shadowBlur = 5;
+            ctx.font = `${size * 0.45}px Arial`;
+            ctx.fillText('👽', cx, cy - size * 0.28);
+
+            // ⭐ Elite-Marker oben rechts
+            ctx.shadowBlur = 0;
+            ctx.font = `${size * 0.38}px Arial`;
+            ctx.fillText('⭐', cx + size * 0.42, cy - size * 0.42);
+            ctx.restore();
+
+            // Roter Tint-Ring via screen blend
+            ctx.save();
+            ctx.globalCompositeOperation = 'screen';
+            ctx.globalAlpha = 0.22;
+            ctx.fillStyle   = glowColor;
+            ctx.beginPath();
+            ctx.arc(cx, cy, size * 0.55, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.restore();
+        }
+
+        function handleEliteShoot(elite, difficulty) {
+            if (state.frameCount - elite.lastShotFrame < elite.shotCooldown) return;
+            const size = UFO.size * 1.5;
+            const cx   = elite.x + size / 2;
+            const cy   = elite.y + size / 2;
+            const dx   = state.mouseX + SHIP.size / 2 - cx;
+            const dy   = state.mouseY + SHIP.size / 2 - cy;
+            const dist = Math.hypot(dx, dy);
+            if (dist <= 0 || dist >= ALIEN_LASER.shootRange * 1.3) return;
+
+            const spd   = difficulty.alienLaserSpeed * 1.1;
+            const angle = Math.atan2(dy, dx);
+
+            // Phase bestimmt Schussmuster
+            const shots = elite.hp === 3 ? [0]                            // single
+                        : elite.hp === 2 ? [-0.2, 0, 0.2]                 // 3er Salve
+                        :                  [-0.35, -0.18, 0, 0.18, 0.35]; // 5er Salve
+
+            shots.forEach(offset => {
+                const a = angle + offset;
+                state.alienLasers.push({ x: cx, y: cy, vx: Math.cos(a) * spd, vy: Math.sin(a) * spd });
+            });
+            spawnMuzzleFlash(cx, cy, 10);
+            elite.lastShotFrame = state.frameCount;
+        }
+
+        function updateElites(difficulty, dt60 = 1) {
+            const slowMult = state.buffs.slowTime > 0 ? 0.1 : 1;
+            const hyperSpeed = state.buffs.hyperspace > 0;
+            const size = UFO.size * 1.5;
+
+            for (let i = state.elites.length - 1; i >= 0; i--) {
+                const elite = state.elites[i];
+
+                const speed = hyperSpeed
+                    ? difficulty.ufoSpeed * 8
+                    : difficulty.ufoSpeed * 1.5 * slowMult;
+
+                // Erratisches Movement: vy zufällig kippen
+                elite._erraticAcc = (elite._erraticAcc || 0) + dt60;
+                if (elite._erraticAcc >= elite._erraticInterval) {
+                    elite._erraticAcc      = 0;
+                    elite._erraticInterval = 12 + Math.random() * 22;
+                    elite.vy = (Math.random() * 8 - 4) * slowMult;
+                }
+
+                moveEntity(elite, speed, size, dt60);
+                if (elite.x + size < 0) { state.elites.splice(i, 1); continue; }
+
+                if (!hyperSpeed) handleEliteShoot(elite, difficulty);
+
+                drawElite(elite);
+            }
+        }
+
         function updateBosses(difficulty, dt60 = 1) {
             const slowMult  = state.buffs.slowTime > 0 ? 0.1 : 1;
             const shipCx    = state.mouseX + SHIP.size / 2;
@@ -2499,13 +2619,16 @@
 
                 if (laserHitsGroup(laserRect, l, state.ufos, UFO.size, 1, difficulty)) continue;
                 if (laserHitsGroup(laserRect, l, state.bosses, BOSS.size, 10, difficulty)) continue;
+                if (laserHitsElite(laserRect, l, difficulty)) continue;
                 laserHitsComet(laserRect, l, difficulty);
             }
 
+            const eliteSize = UFO.size * 1.5;
             // Schiff vs alle gefährlichen Entities → eine Schleife mit Array
             const dangers = [
                 ...state.ufos.map(e    => ({ x: e.x, y: e.y, width: UFO.size,  height: UFO.size })),
                 ...state.bosses.map(e  => ({ x: e.x, y: e.y, width: BOSS.size, height: BOSS.size })),
+                ...state.elites.map(e  => ({ x: e.x, y: e.y, width: eliteSize, height: eliteSize })),
                 ...state.comets.map(e  => ({ x: e.x, y: e.y, width: e.size,    height: e.size })),
                 ...state.alienLasers.map(e => ({
                     x: e.x, y: e.y - LASER.height / 2,
@@ -2522,6 +2645,40 @@
                 applyPowerUp(state.powerUps[i].type);
                 state.powerUps.splice(i, 1);
             }
+        }
+
+        /** Elite Enemy Treffer – HP-basierte Phasen */
+        function laserHitsElite(laserRect, laserIdx, difficulty) {
+            const size = UFO.size * 1.5;
+            for (let i = state.elites.length - 1; i >= 0; i--) {
+                const elite   = state.elites[i];
+                const hitRect = { x: elite.x, y: elite.y, width: size, height: size };
+                if (!checkCollision(laserRect, hitRect)) continue;
+
+                state.lasers.splice(laserIdx, 1);
+                const cx = elite.x + size / 2;
+                const cy = elite.y + size / 2;
+                bloodRegenHit(cx, cy);
+                elite.hp--;
+
+                if (elite.hp <= 0) {
+                    spawnExplosion(cx, cy, 50);
+                    state.elites.splice(i, 1);
+                    registerKill(5, cx, cy);
+                    state.stats.ufosKilled++;
+                    triggerShake(10, 14);
+                    spawnPopup('⭐ ELITE DOWN!', cx - 55, cy - 40, '#ff8800', 22);
+                    spawnMoneyDrops(3, cx, cy);
+                } else {
+                    spawnExplosion(cx, cy, 20);
+                    triggerShake(5, 8);
+                    const label = elite.hp === 2 ? '⭐ PHASE 2!' : '⭐ RAGE!';
+                    const color = elite.hp === 2 ? '#ff8800'    : '#ffdd00';
+                    spawnPopup(label, cx - 45, cy - 35, color, 18);
+                }
+                return true;
+            }
+            return false;
         }
 
         /** Prüft ob ein Spieler-Laser eine Gruppe (UFOs oder Bosse) trifft */
@@ -2813,10 +2970,11 @@
                 });
                 state.ufos   = [];
                 state.bosses = [];
+                state.elites = [];
                 updateScoreDisplay();
             } else {
                 // Effekt B: Alle Gegner verwandeln sich in 💰 Power-Ups
-                [...state.ufos, ...state.bosses].forEach(e => {
+                [...state.ufos, ...state.bosses, ...state.elites].forEach(e => {
                     const size = e.hp !== undefined ? BOSS.size : UFO.size;
                     state.powerUps.push({
                         x: e.x + size / 2 - POWERUP.size / 2,
@@ -2826,6 +2984,7 @@
                 });
                 state.ufos   = [];
                 state.bosses = [];
+                state.elites = [];
             }
         }
 
@@ -3264,6 +3423,7 @@
                 updateAlienLasers(dt60);
                 updateUfos(difficulty, dt60);
                 updateBosses(difficulty, dt60);
+                updateElites(difficulty, dt60);
                 updateComets(difficulty, dt60);
                 updatePowerUps(dt60);
                 drawStormRing();
