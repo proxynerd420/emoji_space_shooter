@@ -3742,10 +3742,17 @@
             });
         }
 
+        let _gpUpdateTimeout = null;
+        function scheduleGamepadUpdate() {
+            // Kurz warten damit beide Pads vollständig registriert sind bevor dedupliziert wird
+            clearTimeout(_gpUpdateTimeout);
+            _gpUpdateTimeout = setTimeout(updateGamepadStatus, 300);
+        }
+
         window.addEventListener('gamepadconnected', (e) => {
             gpConnected = true;
             console.log('🎮 Gamepad verbunden:', e.gamepad.id);
-            updateGamepadStatus();
+            scheduleGamepadUpdate();
             onFirstGesture();
         });
         window.addEventListener('gamepaddisconnected', (e) => {
@@ -3753,11 +3760,11 @@
             try { pads = navigator.getGamepads ? [...navigator.getGamepads()] : []; } catch(e) {}
             gpConnected = pads.some(p => p && p.connected);
             console.log('🎮 Gamepad getrennt:', e.gamepad.id);
-            updateGamepadStatus();
+            scheduleGamepadUpdate();
         });
 
         // Initial-Check: Bluetooth-Pads sind manchmal schon vor dem Event da
-        updateGamepadStatus();
+        scheduleGamepadUpdate();
 
 
 
