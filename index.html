@@ -2258,17 +2258,16 @@
             ufo.lastShotFrame = state.frameCount;
         }
 
-        function drawElite(elite) {
+        function drawElite(elite, frozen = false) {
             const size = UFO.size * 1.5;
             const cx   = elite.x + size / 2;
             const cy   = elite.y + size / 2;
 
-            // Pulsierender Glow: shadowBlur schwingt zwischen 14 und 30
             elite._glowAnim = (elite._glowAnim || 0) + 0.08;
             const pulse = 14 + Math.sin(elite._glowAnim) * 10;
 
-            // HP-Farbe: rot (3HP) → orange (2HP) → gelb (1HP)
-            const glowColor = elite.hp === 3 ? '#ff2200'
+            const glowColor = frozen ? '#88ddff'
+                            : elite.hp === 3 ? '#ff2200'
                             : elite.hp === 2 ? '#ff8800'
                             :                  '#ffdd00';
 
@@ -2276,30 +2275,37 @@
             ctx.textAlign    = 'center';
             ctx.textBaseline = 'middle';
             ctx.shadowColor  = glowColor;
-            ctx.shadowBlur   = pulse;
+            ctx.shadowBlur   = frozen ? 14 : pulse;
             ctx.font = `${size}px Arial`;
             ctx.fillText('🛸', cx, cy);
-
-            // 👽 Pilot
             ctx.shadowBlur = 5;
             ctx.font = `${size * 0.45}px Arial`;
             ctx.fillText('👽', cx, cy - size * 0.28);
-
-            // ⭐ Elite-Marker oben rechts
             ctx.shadowBlur = 0;
             ctx.font = `${size * 0.38}px Arial`;
             ctx.fillText('⭐', cx + size * 0.42, cy - size * 0.42);
             ctx.restore();
 
-            // Roter Tint-Ring via screen blend
+            // Tint-Ring
             ctx.save();
             ctx.globalCompositeOperation = 'screen';
-            ctx.globalAlpha = 0.22;
+            ctx.globalAlpha = frozen ? 0.4 : 0.22;
             ctx.fillStyle   = glowColor;
             ctx.beginPath();
             ctx.arc(cx, cy, size * 0.55, 0, Math.PI * 2);
             ctx.fill();
             ctx.restore();
+
+            // Eis-Overlay: Schneeflocke
+            if (frozen) {
+                ctx.save();
+                ctx.globalAlpha  = 0.75;
+                ctx.font         = `${size * 0.45}px Arial`;
+                ctx.textAlign    = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText('❄️', cx + size * 0.35, cy - size * 0.35);
+                ctx.restore();
+            }
         }
 
         function handleEliteShoot(elite, difficulty) {
@@ -2336,6 +2342,14 @@
             for (let i = state.elites.length - 1; i >= 0; i--) {
                 const elite = state.elites[i];
 
+                // Freeze-Countdown
+                if (elite.frozen > 0) {
+                    elite.frozen -= dt60;
+                    if (elite.frozen <= 0) { elite.frozen = 0; elite.vy = elite.frozenVy; }
+                    drawElite(elite, true);
+                    continue;
+                }
+
                 const speed = hyperSpeed
                     ? difficulty.ufoSpeed * 8
                     : difficulty.ufoSpeed * 1.5 * slowMult;
@@ -2353,7 +2367,7 @@
 
                 if (!hyperSpeed) handleEliteShoot(elite, difficulty);
 
-                drawElite(elite);
+                drawElite(elite, false);
             }
         }
 
@@ -2367,6 +2381,33 @@
                 : difficulty.bossSpeed * slowMult;
             for (let i = state.bosses.length - 1; i >= 0; i--) {
                 const boss = state.bosses[i];
+
+                // Freeze-Countdown
+                if (boss.frozen > 0) {
+                    boss.frozen -= dt60;
+                    if (boss.frozen <= 0) { boss.frozen = 0; boss.vy = boss.frozenVy; }
+                    // Boss eingefroren zeichnen: Schneeflocke overlay
+                    drawBoss(boss);
+                    const bcx = boss.x + BOSS.size / 2;
+                    const bcy = boss.y + BOSS.size / 2;
+                    ctx.save();
+                    ctx.globalCompositeOperation = 'screen';
+                    ctx.globalAlpha = 0.35;
+                    ctx.fillStyle = '#88ddff';
+                    ctx.beginPath();
+                    ctx.arc(bcx, bcy, BOSS.size * 0.52, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.restore();
+                    ctx.save();
+                    ctx.globalAlpha = 0.8;
+                    ctx.font = `${BOSS.size * 0.4}px Arial`;
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText('❄️', bcx + BOSS.size * 0.3, bcy - BOSS.size * 0.3);
+                    ctx.restore();
+                    continue;
+                }
+
                 moveEntity(boss, speed, BOSS.size, dt60);
                 if (boss.x + BOSS.size < 0) { state.bosses.splice(i, 1); continue; }
 
@@ -2668,6 +2709,16 @@
                 const hitRect = { x: elite.x, y: elite.y, width: size, height: size };
                 if (!checkCollision(laserRect, hitRect)) continue;
 
+                // Freeze: halbe Dauer, Elite wird nur verlangsamt (50% speed) statt gestoppt
+                if (state.buffs.ice > 0 && !elite.frozen) {
+                    elite.frozen   = FREEZE_DURATION_FRAMES * 0.5;
+                    elite.frozenVy = elite.vy;
+                    elite.vy       = 0;
+                    state.lasers.splice(laserIdx, 1);
+                    spawnPopup('❄️ FROZEN!', elite.x, elite.y - 20, '#88ddff', 18);
+                    return true;
+                }
+
                 state.lasers.splice(laserIdx, 1);
                 const cx = elite.x + size / 2;
                 const cy = elite.y + size / 2;
@@ -2717,7 +2768,14 @@
                 const cy = group[i].y + size / 2;
 
                 if (group[i].hp !== undefined) {
-                    // Boss: HP abziehen – jeder Treffer zählt für Blut-Buff
+                    // Boss: Freeze mit 40% Dauer, danach HP abziehen
+                    if (state.buffs.ice > 0 && !group[i].frozen) {
+                        group[i].frozen   = FREEZE_DURATION_FRAMES * 0.4;
+                        group[i].frozenVy = group[i].vy;
+                        group[i].vy       = 0;
+                        spawnPopup('❄️ FROZEN!', cx - 35, cy - 30, '#88ddff', 18);
+                        return true;
+                    }
                     group[i].hp--;
                     bloodRegenHit(cx, cy);
                     if (group[i].hp <= 0) {
