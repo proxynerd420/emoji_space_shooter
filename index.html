@@ -2821,8 +2821,8 @@
                     const label = state.satelliteCount > 1 ? `🛰️ x${state.satelliteCount} SATELLIT!` : '🛰️ SATELLIT!';
                     spawnPopup(label, px, py, '#00ffcc');
                 } else {
-                    // Max erreicht → Dauer auffüllen
-                    state.buffs.satellite = BUFF_DURATION_FRAMES;
+                    // Cap erreicht → Dauer addieren statt ersetzen
+                    stackBuff('satellite', BUFF_DURATION_FRAMES);
                     spawnPopup('🛰️ MAX ORBIT!', px, py, '#00ffcc');
                 }
             },
