@@ -602,11 +602,12 @@
                 <button class="hs-filter-btn active" data-sort="score">Nach Score</button>
                 <button class="hs-filter-btn" data-sort="level">Nach Level</button>
                 <button class="hs-filter-btn" data-sort="kills">Nach Kills</button>
+                <button class="hs-filter-btn" data-sort="combo">Höchste Combo</button>
             </div>
             <table class="hs-table">
                 <thead>
                     <tr>
-                        <th>#</th><th>NAME</th><th>SCORE</th><th>LEVEL</th><th>☠️ KILLS</th>
+                        <th>#</th><th>NAME</th><th>SCORE</th><th>LEVEL</th><th>☠️ KILLS</th><th>🔥 COMBO</th>
                     </tr>
                 </thead>
                 <tbody id="hsTableBody"></tbody>
@@ -852,6 +853,7 @@
                 name: (name.trim().toUpperCase().slice(0, 12)) || 'ANONYM',
                 score, level,
                 kills: getTotalKills(),
+                maxCombo: state.maxCombo,
                 debug:  debugUsed,
                 cheat:  state.usedKonami ?? false,
                 date: new Date().toLocaleDateString('de-DE', { day:'2-digit', month:'2-digit', year:'2-digit' })
@@ -865,7 +867,8 @@
             const sorted = [...highscores].sort((a, b) =>
                 hsSort === 'score' ? b.score - a.score :
                 hsSort === 'level' ? b.level - a.level :
-                (b.kills || 0) - (a.kills || 0));
+                hsSort === 'kills' ? (b.kills || 0) - (a.kills || 0) :
+                (b.maxCombo || 0) - (a.maxCombo || 0));
             if (sorted.length === 0) {
                 $hsTableBody.innerHTML = '<tr><td colspan="5" class="hs-empty">Noch keine Eintr\u00e4ge. Spiel los! 🚀</td></tr>';
                 return;
@@ -882,6 +885,7 @@
                     <td><strong>${e.score}</strong></td>
                     <td>Lvl ${e.level}</td>
                     <td style="color:rgba(255,255,255,.55);font-size:13px">☠️ ${e.kills ?? '–'}</td>
+                    <td style="color:rgba(255,165,0,.8);font-size:13px">${e.maxCombo ? `x${(1+(e.maxCombo-1)*0.5).toFixed(1)}` : '–'}</td>
                 </tr>`;
             }).join('');
         }
@@ -1379,6 +1383,7 @@
                 combo: 0,
                 comboMult: 1,
                 comboLastKillTime: 0,
+                maxCombo: 0,
                 buffs: { noCooldown: 0, spreadFire: 0, homing: 0, hyperspace: 0, shield: 0, slowTime: 0,
                          magnet: 0, blood: 0, ice: 0, rainbow: 0, storm: 0, satellite: 0 },
                 bloodHitCounter: 0,   // Treffer-Zähler für Blut-Powerup
@@ -2749,6 +2754,7 @@
             state.combo++;
             state.comboMult = 1 + (state.combo - 1) * 0.5;
             state.comboLastKillTime = performance.now();
+            if (state.combo > state.maxCombo) state.maxCombo = state.combo;
             const earned = Math.round(baseScore * state.comboMult);
             state.score += earned;
             updateScoreDisplay();
