@@ -2,6 +2,9 @@
 <html lang="de">
 <head>
     <title>🛸 Emoji Space Shooter 🛸</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700;800&display=swap" rel="stylesheet">
     <style>
         * {
             margin: 0;
@@ -15,7 +18,7 @@
 
         body {
             background: #000000;
-            font-family: 'Arial Black', Arial, sans-serif;
+            font-family: 'JetBrains Mono', 'Fira Code', monospace;
             color: white;
             display: flex;
             justify-content: center;
@@ -54,7 +57,7 @@
             bottom: 20px;
             right: 20px;
             font-size: 13px;
-            font-family: monospace;
+            font-family: 'JetBrains Mono', 'Fira Code', monospace;
             background: rgba(0, 0, 0, 0.75);
             border: 1px solid #00ff88;
             border-radius: 8px;
@@ -82,7 +85,7 @@
             bottom: 20px;
             left: 20px;
             font-size: 11px;
-            font-family: monospace;
+            font-family: 'JetBrains Mono', 'Fira Code', monospace;
             color: rgba(255,255,255,0.3);
             z-index: 10;
         }
@@ -150,7 +153,7 @@
             bottom: 20px;
             right: 20px;
             font-size: 11px;
-            font-family: monospace;
+            font-family: 'JetBrains Mono', 'Fira Code', monospace;
             color: rgba(255,255,255,0.3);
             z-index: 10;
             display: none;
@@ -163,7 +166,7 @@
             top: 56px;
             right: 20px;
             font-size: 13px;
-            font-family: monospace;
+            font-family: 'JetBrains Mono', 'Fira Code', monospace;
             z-index: 10;
             display: flex;
             gap: 4px;
@@ -176,7 +179,7 @@
             color: rgba(255,255,255,0.35);
             cursor: pointer;
             transition: all .12s;
-            font-family: monospace;
+            font-family: 'JetBrains Mono', 'Fira Code', monospace;
             font-size: 12px;
         }
         .fm-btn.active {
@@ -217,7 +220,7 @@
 
         .buff-slot .buff-label {
             font-size: 10px;
-            font-family: monospace;
+            font-family: 'JetBrains Mono', 'Fira Code', monospace;
             color: #00ff88;
             letter-spacing: 1px;
             margin-top: 2px;
@@ -225,7 +228,7 @@
 
         .buff-slot .buff-timer {
             font-size: 13px;
-            font-family: 'Arial Black', Arial, sans-serif;
+            font-family: 'JetBrains Mono', 'Fira Code', monospace;
             color: white;
             margin-top: 2px;
         }
@@ -274,7 +277,7 @@
         @keyframes cheeseSpin { to { transform: rotate(360deg); } }
         #loadingMsg {
             font-size: 18px;
-            font-family: monospace;
+            font-family: 'JetBrains Mono', 'Fira Code', monospace;
             color: rgba(255,255,255,0.75);
             letter-spacing: 2px;
             text-shadow: 0 0 12px rgba(255,220,0,0.4);
@@ -315,7 +318,7 @@
 
         .popup {
             position: absolute;
-            font-family: 'Arial Black', Arial, sans-serif;
+            font-family: 'JetBrains Mono', 'Fira Code', monospace;
             font-weight: 900;
             white-space: nowrap;
             pointer-events: none;
@@ -372,7 +375,7 @@
         .gp-badge {
             display: flex; align-items: center; gap: 10px;
             padding: 7px 16px; border-radius: 20px;
-            font-size: 12px; font-family: monospace; letter-spacing: 1px;
+            font-size: 12px; font-family: 'JetBrains Mono', 'Fira Code', monospace; letter-spacing: 1px;
             border: 1px solid;
             transition: all 0.3s;
         }
@@ -407,7 +410,7 @@
             display: block; width: 280px; padding: 16px 0; margin: 8px 0;
             background: rgba(0,0,0,0.7); border: 2px solid #00ff88;
             border-radius: 14px; color: white;
-            font-family: 'Arial Black', Arial, sans-serif;
+            font-family: 'JetBrains Mono', 'Fira Code', monospace;
             font-size: 18px; font-weight: 900; letter-spacing: 2px;
             cursor: pointer; transition: background .15s, box-shadow .15s, transform .1s;
             text-align: center;
@@ -474,7 +477,7 @@
         .hs-filter-btn {
             padding: 6px 18px; border-radius: 20px; border: 1px solid #00ff8877;
             background: transparent; color: rgba(255,255,255,0.6);
-            font-family: 'Arial Black', Arial, sans-serif; font-size: 12px; cursor: pointer;
+            font-family: 'JetBrains Mono', 'Fira Code', monospace; font-size: 12px; cursor: pointer;
             transition: all .15s;
         }
         .hs-filter-btn.active, .hs-filter-btn:hover { background: rgba(0,255,136,.2); border-color: #00ff88; color: white; }
@@ -552,7 +555,7 @@
         #nameInputPanel .ni-score { font-size: 15px; color: rgba(255,255,255,.5); margin-bottom: 24px; }
         #playerNameInput {
             width: 100%; padding: 14px 18px; font-size: 22px;
-            font-family: 'Arial Black', Arial, sans-serif;
+            font-family: 'JetBrains Mono', 'Fira Code', monospace;
             background: rgba(255,255,255,.07); border: 2px solid #ffd700;
             border-radius: 12px; color: white; text-align: center;
             letter-spacing: 3px; outline: none; margin-bottom: 20px; box-sizing: border-box;
@@ -574,13 +577,13 @@
         .diff-btn {
             padding: 6px 14px; border-radius: 8px; border: 1px solid #ffffff33;
             background: transparent; color: rgba(255,255,255,.5);
-            font-family: 'Arial Black', Arial, sans-serif; font-size: 12px; cursor: pointer; transition: all .15s;
+            font-family: 'JetBrains Mono', 'Fira Code', monospace; font-size: 12px; cursor: pointer; transition: all .15s;
         }
         .diff-btn.active { background: rgba(0,255,136,.2); border-color: #00ff88; color: white; }
         .preview-btn {
             padding: 6px 12px; border-radius: 8px; border: 1px solid #ffffff22;
             background: transparent; color: rgba(255,255,255,.45);
-            font-family: monospace; font-size: 11px; letter-spacing: 1px;
+            font-family: 'JetBrains Mono', 'Fira Code', monospace; font-size: 11px; letter-spacing: 1px;
             cursor: pointer; transition: all .15s;
         }
         .preview-btn:hover  { border-color: #ffffff55; color: rgba(255,255,255,.8); }
@@ -802,8 +805,6 @@
         const $playerNameInput   = document.getElementById('playerNameInput');
         const $shopPanel         = document.getElementById('shopPanel');
         const $shopGridCommon    = document.getElementById('shopGridCommon');
-        const $shopGridBuff      = document.getElementById('shopGridBuff');
-        const $shopCoins         = document.getElementById('shopCoins');
 
         const LOADING_MESSAGES = [
             'UFOs bemannen...',
@@ -1073,8 +1074,16 @@
                 date: new Date().toLocaleDateString('de-DE', { day:'2-digit', month:'2-digit', year:'2-digit' })
             });
             highscores.sort((a, b) => b.score - a.score);
-            if (highscores.length > 100) highscores.length = 100;
-            try { localStorage.setItem('ess_highscores', JSON.stringify(highscores)); } catch(e) {}
+            if (highscores.length > 50) highscores.length = 50;
+            try {
+                localStorage.setItem('ess_highscores', JSON.stringify(highscores));
+            } catch(e) {
+                // QuotaExceededError (Safari/iOS): älteste Hälfte entfernen und nochmal
+                try {
+                    highscores.length = 25;
+                    localStorage.setItem('ess_highscores', JSON.stringify(highscores));
+                } catch(e2) {}
+            }
 
             // Neuer Platz 1 → nächsten Cheat freischalten
             if (wasFirst) {
@@ -1199,7 +1208,7 @@
         document.getElementById('btnQuit').addEventListener('click', () => {
             window.close();
             setTimeout(() => {
-                document.body.innerHTML = '<div style="color:white;font-size:22px;text-align:center;margin-top:40vh;font-family:Arial">Tab schließen zum Beenden 👋</div>';
+                document.body.innerHTML = '<div style="color:white;font-size:22px;text-align:center;margin-top:40vh;font-family:monospace">Tab schließen zum Beenden 👋</div>';
             }, 200);
         });
 
@@ -1428,6 +1437,7 @@
                 { label: '🌀 Sturm',             value: state.stats.powerUpsCollected.storm },
                 { label: '🛰️ Satellit',          value: state.stats.powerUpsCollected.satellite },
                 { label: '🧀 Cheese',            value: state.stats.powerUpsCollected.cheese },
+                { label: '💎 Diamant',           value: state.stats.powerUpsCollected.diamond },
             ];
         }
 
@@ -1540,6 +1550,8 @@
             // ── Loot (Währung) ─────────────────────────────────────────────────
             money:      { emoji: '💰', label: 'Münze',      category: 'loot',   price: 0,  dropWeight: 8 },
             bonus:      { emoji: '💰', label: 'Bonus',      category: 'loot',   price: 0,  dropWeight: 4 },
+            goldbar:    { emoji: '🥇', label: 'Goldbarren', category: 'loot',   price: 0,  dropWeight: 0 },
+            diamond:    { emoji: '💎', label: 'Diamant',    category: 'loot',   price: 0,  dropWeight: 0 },
             cheese:     { emoji: '🧀', label: 'Godmode',    category: 'loot',   price: 0,  dropWeight: 0 }, // nur debug
 
             // ── Free (droppen, kein Kaufmenü) ──────────────────────────────────
@@ -1581,6 +1593,18 @@
         const FREEZE_DURATION_FRAMES     = 300; //  5 Sekunden Einfrieren
         const BUFF_MAX_STACK             = BUFF_DURATION_FRAMES * 5;     // Cap: 50s
         const SLOWTIME_MAX_STACK         = SLOWTIME_DURATION_FRAMES * 5; // Cap: 25s
+
+        const BUFF_SLOTS = [
+            { key: 'shield',     emoji: '🛡️',  label: 'SCHILD',    color: '#44aaff' },
+            { key: 'rapidFire',  emoji: '⚡',   label: 'RAPID',     color: '#ffdd00' },
+            { key: 'spreadFire', emoji: '🔱',   label: 'SPREAD',    color: '#ff8800' },
+            { key: 'magnet',     emoji: '🧲',   label: 'MAGNET',    color: '#ff44ff' },
+            { key: 'blood',      emoji: '🩸',   label: 'BLUT',      color: '#ff2222' },
+            { key: 'ice',        emoji: '❄️',   label: 'EIS',       color: '#88ddff' },
+            { key: 'rainbow',    emoji: '🌈',   label: 'RAINBOW',   color: '#ffffff' },
+            { key: 'storm',      emoji: '🌀',   label: 'STURM',     color: '#aaddff' },
+            { key: 'satellite',  emoji: '🛰️',  label: 'SATELLIT',  color: '#00ff88' },
+        ];
 
         /** Buff-Zeit stacken statt überschreiben, mit Cap */
         function stackBuff(key, add, cap = BUFF_MAX_STACK) {
@@ -1897,7 +1921,7 @@
             if (state.gameOver && gamePhase === 'gameover') {
                 $nameInputPanel.classList.remove('visible');
                 stopMenuMusic();
-                launchGame();
+                startGame();
             }
         }
 
@@ -3998,6 +4022,11 @@
                 isFireHeld          = rtPressed;
                 if (!rtPressed) fireShotThisPress = false;
             }
+            // Sicherheitsnetz: falls RT-State inkonsistent ist (z.B. nach Reconnect)
+            if (!rtPressed && isFireHeld && gamePhase !== 'playing') {
+                isFireHeld = false;
+                fireShotThisPress = false;
+            }
 
             // ── Bewegung nur im Spiel ─────────────────────────────────────────────
             if (gamePhase !== 'playing' || state.gameOver || paused) return;
@@ -4092,6 +4121,10 @@
         window.addEventListener('gamepadconnected', (e) => {
             gpConnected = true;
             console.log('🎮 Gamepad verbunden:', e.gamepad.id);
+            // gpPrevButtons leeren damit keine Buttons "stecken bleiben"
+            Object.keys(gpPrevButtons).forEach(k => delete gpPrevButtons[k]);
+            isFireHeld        = false;
+            fireShotThisPress = false;
             scheduleGamepadUpdate();
             onFirstGesture();
         });
@@ -4100,6 +4133,9 @@
             try { pads = navigator.getGamepads ? [...navigator.getGamepads()] : []; } catch(e) {}
             gpConnected = pads.some(p => p && p.connected);
             console.log('🎮 Gamepad getrennt:', e.gamepad.id);
+            // Feuer-State zurücksetzen
+            isFireHeld        = false;
+            fireShotThisPress = false;
             scheduleGamepadUpdate();
         });
 
@@ -4955,44 +4991,7 @@
             if (musicTimeout) { clearTimeout(musicTimeout); musicTimeout = null; }
             document.getElementById('musicStyleHud').style.display = 'none';
         }
-        // ─── ROADMAP / GEPLANTE FEATURES ─────────────────────────────────────────
-        //
-        // ┌────────────────────────────────────────────────────────────────────────┐
-        // │ CHEAT-MENÜ (Konami-Code + Custom Codes)                                │
-        // ├────────────────────────────────────────────────────────────────────────┤
-        // │ AKTIVIERUNG:                                                           │
-        // │   Konami-Code: ↑↑↓↓←→←→BA (klassisch, 10 Tasten)                       │
-        // │   → Versteckter Menüpunkt in den Optionen wird sichtbar                │
-        // │   → Bleibt sichtbar bis Seite neu geladen wird (kein localStorage)     │
-        // │   → Konami-Nutzung setzt state.usedKonami = true                       │
-        // │   → Highscore-Eintrag bekommt Flag: cheat: true                        │
-        // │   → Darstellung in Highscore-Tabelle: 🧀 (roter Tint) NAME 🧀         │
-        // │     (debug-Flag = gelber Käse, cheat-Flag = roter Käse)                │
-        // │                                                                        │
-        // │ CHEAT-EINGABE:                                                         │
-        // │   10 Slots, jeder scrollbar durch: ↑ ↓ ← → A B                         │
-        // │   → Tastatur + Gamepad D-Pad navigierbar                               │
-        // │   → LB/RB wechselt aktiven Slot, D-Pad ändert Symbol                   │
-        // │   → "Aktivieren"-Button bestätigt den eingegebenen Code                │
-        // │   → Solange Konami nicht aktiv: "Bitte erst Konami-Code eingeben!"     │
-        // │                                                                        │
-        // │ GEPLANTE CODES (Beispiele):                                            │
-        // │   ↑↑↑↑↑↑↑↑↑↑↑↑  → God Mode (Käse-Buff permanent)                       │
-        // │   ←←←←→→→→ABAB  → Max alle Buffs                                       │
-        // │   ↓↓↓↓↓↓↓↓↓↓↓↓  → Max Score (+9999)                                    │
-        // │   →←→←→←→←→←→←  → Unendlich Schilde                                    │
-        // │   AABBABABABABAB → Debug-Modus permanent                               │
-        // │   (weitere frei definierbar)                                           │
-        // │                                                                        │
-        // │ IMPLEMENTATION:                                                        │
-        // │   - Konami-Listener auf keydown + gamepad (10-Tasten-Buffer)           │
-        // │   - let konamiActive = false (session-only)                            │
-        // │   - Cheat-Map als Object: code-string → effect-function                │
-        // │   - UI: 12× Scroll-Widget mit ↑/↓ Buttons + Symbol-Anzeige             │
-        // │   - saveHighscore() prüft state.usedKonami → cheat: true               │
-        // │   - renderHighscoreTable(): cheat-Flag → rotes Käse-Emoji              │
-        // └────────────────────────────────────────────────────────────────────────┘
-
+        
         // ─── Startmenü-Soundtrack: EPIC SPACE MISSION ────────────────────────────
         //
         // 108 BPM, C-Moll, orchestral epic:
